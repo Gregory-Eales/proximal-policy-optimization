@@ -1,21 +1,13 @@
-"""
-This file defines the core research contribution   
-"""
 import os
 import torch
 from torch.utils.data import DataLoader
 from argparse import ArgumentParser
-import gym3
-from procgen import ProcgenGym3Env
-#import pytorch_lightning as pl
-
 from procgen import ProcgenEnv
-#from algorithm.algorithm import Algorithm
+from ppo.ppo import PPO
 
-#pl.seed_everything(123)
 
 def run():
-    env = ProcgenGym3Env(num=2, env_name="coinrun", render_mode="rgb_array")
+    env = ProcgenEnv(env_name="coinrun", render_mode="rgb_array")
     env = gym3.ViewerWrapper(env, info_key="rgb")
     step = 0
     for i in range(100):
@@ -25,17 +17,25 @@ def run():
         print(f"step {step} reward {rew} first {first}")
         step += 1
 
+    
+    
+
+    torch.manual_seed(1)
+    np.random.seed(1)
+
+    ppo = PPO(alpha=0.00001, in_dim=4, out_dim=2)
+
+    ppo.policy_network.load_state_dict(torch.load("policy_params.pt"))
+
+    ppo.train(env, n_epoch=1000, n_steps=800, render=False, verbos=False)
+
+    plt.plot(ppo.hist_length)
+    plt.show()
+
+
 
 if __name__ == '__main__':
     
-    """
-    parser = ArgumentParser(add_help=False)
-    parser.add_argument('--learning_rate', default=0.02, type=float)
-    # add args from trainer
-    parser = pl.Trainer.add_argparse_args(parser)
-    # parse params
-    args = parser.parse_args()
-    """
     run()
     
     

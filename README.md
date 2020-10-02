@@ -22,7 +22,7 @@ cd Proximal-Policy-Optimization
 pip install -e .   
 pip install -r requirements.txt
  ```   
- Next, navigate to ppo and run it.   
+ Next, navigate to ppo, then train and run it.   
  ```bash
 # module folder
 cd ppo/    

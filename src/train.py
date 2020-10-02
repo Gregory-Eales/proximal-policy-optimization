@@ -1,40 +1,46 @@
-"""
-This file defines the core research contribution   
-"""
 import os
 import torch
 from torch.utils.data import DataLoader
 from argparse import ArgumentParser
-import pytorch_lightning as pl
+from procgen import ProcgenEnv
+from ppo.ppo import PPO
 
-# trains the specific algorithm
-from algorithm.trainer import AlgorithmTrainer
+def train(params):
 
-# lightning wrapper for orchestrating the algorithm
-from algorithm.algorithm import Algorithm
+    torch.manual_seed(1)
+    np.random.seed(1)
 
-pl.seed_everything(123)
 
-def train():
-    pass
+    env = ProcgenEnv(env_name="coinrun", render_mode="rgb_array")
+    step = 0
+    for i in range(100):
+        
+        env.act(gym3.types_np.sample(env.ac_space, bshape=(env.num,)))
+        rew, obs, first = env.observe()
+        print(f"step {step} reward {rew} first {first}")
+        step += 1
+
+    
+
+    
+
+    ppo = PPO(alpha=0.00001, in_dim=4, out_dim=2)
+
+    ppo.policy_network.load_state_dict(torch.load("policy_params.pt"))
+
+    ppo.train(env, n_epoch=1000, n_steps=800, render=False, verbos=False)
 
 
 if __name__ == '__main__':
     
+    
     parser = ArgumentParser(add_help=False)
     parser.add_argument('--learning_rate', default=0.02, type=float)
-
-    # add args from trainer
-    parser = pl.Trainer.add_argparse_args(parser)
-
-    # parse params
-    args = parser.parse_args()
-
-    # init module
-    model = CoolSystem(hparams=args)
-
-    # most basic trainer, uses good defaults
-    trainer = pl.Trainer.from_argparse_args(args)
-    trainer.fit(model, train_data)
+    
 
 
+    param = parser.parse_args()
+
+    run(params)
+    
+    
