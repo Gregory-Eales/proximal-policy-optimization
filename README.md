@@ -15,10 +15,10 @@ This is a reimplementation of the proximal policy algorithm
 First, install dependencies   
 ```bash
 # clone project   
-git clone https://github.com/Gregory-Eales/Proximal-Policy-Optimization 
+git clone https://github.com/Gregory-Eales/proximal-policy-optimization 
 
 # install project   
-cd Proximal-Policy-Optimization
+cd proximal-policy-optimization
 pip install -e .   
 pip install -r requirements.txt
  ```   
