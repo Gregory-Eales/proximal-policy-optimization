@@ -3,20 +3,9 @@
  
 # Proximal Policy Optimization    
 
-[![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539)
-[![Conference](http://img.shields.io/badge/NeurIPS-2019-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)
-[![Conference](http://img.shields.io/badge/ICLR-2019-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)
-[![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)  
-<!--
-ARXIV   
-[![Paper](http://img.shields.io/badge/arxiv-math.co:1480.1111-B31B1B.svg)](https://www.nature.com/articles/nature14539)
--->
+[![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://arxiv.org/abs/1707.06347)
 
 
-
-<!--  
-Conference   
--->   
 </div>
  
 ## Description   
@@ -36,7 +25,7 @@ pip install -r requirements.txt
  Next, navigate to ppo and run it.   
  ```bash
 # module folder
-cd src/    
+cd ppo/    
 
 # train poo 
 python train.py    
@@ -45,17 +34,11 @@ python train.py
 python run.py    
 ``` 
 
-
-## Baselines    
-List your baselines here.   
-- [PPO Baseline]
-
 ### Citation   
 ```
-@article{YourName,
-  title={Your Title},
-  author={Your team},
-  journal={Location},
-  year={Year}
+@article{schulman1707proximal,
+  title={Proximal policy optimization algorithms. arXiv 2017},
+  author={Schulman, John and Wolski, Filip and Dhariwal, Prafulla and Radford, Alec and Klimov, Oleg},
+  journal={arXiv preprint arXiv:1707.06347}
 }
 ```   
