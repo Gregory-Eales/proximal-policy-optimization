@@ -18,7 +18,7 @@ def run():
         step += 1
 
     
-    
+    ppo.policy_network.load_state_dict(torch.load("policy_params.pt"))
 
     torch.manual_seed(1)
     np.random.seed(1)

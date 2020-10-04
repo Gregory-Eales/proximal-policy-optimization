@@ -1,46 +1,38 @@
-import os
-import torch
-from torch.utils.data import DataLoader
 from argparse import ArgumentParser
-from procgen import ProcgenEnv
-from ppo.ppo import PPO
 
-def train(params):
+import modules
+import utils
 
-    torch.manual_seed(1)
-    np.random.seed(1)
+def main(params):
 
-
-    env = ProcgenEnv(env_name="coinrun", render_mode="rgb_array")
-    step = 0
-    for i in range(100):
-        
-        env.act(gym3.types_np.sample(env.ac_space, bshape=(env.num,)))
-        rew, obs, first = env.observe()
-        print(f"step {step} reward {rew} first {first}")
-        step += 1
-
-    
-
-    
-
-    ppo = PPO(alpha=0.00001, in_dim=4, out_dim=2)
-
-    ppo.policy_network.load_state_dict(torch.load("policy_params.pt"))
-
-    ppo.train(env, n_epoch=1000, n_steps=800, render=False, verbos=False)
+    agent = PPOAgent(param)
 
 
 if __name__ == '__main__':
     
     
     parser = ArgumentParser(add_help=False)
+
+    parser.add_argument('--experiment_name', default="default", type=str)
+    parser.add_argument('--environment name', default="couinrun")
+
+    parser.add_argument('--actor_lr', default=2e-1, type=float)
+    parser.add_argument('--critic_lr', default=2e-1, type=float)
+    
+    parser.add_argument('--n_epochs', default=100, type=int)
+    parser.add_argument('--n_steps', default=200, type=int)
+
+    parser.add_argument('--verbos', default=True, type=bool)
+    parser.add_argument('--graph', default=True, type=bool)
+
+    parser.add_argument('random_seeds', default=list(range(10)), type=list)
+
     parser.add_argument('--learning_rate', default=0.02, type=float)
     
+    
 
+    params = parser.parse_args()
 
-    param = parser.parse_args()
-
-    run(params)
+    main(params)
     
     

@@ -30,8 +30,6 @@ class PolicyNetwork(torch.nn.Module):
         self.conv3 = torch.nn.Conv2d(64, 128, kernel_size=4, stride=2)
         self.conv4 = torch.nn.Conv2d(128, 256, kernel_size=4, stride=2)
 
-    
-
     def normalize(self, x):
         x = np.array(x)
         x_mean = np.mean(x)

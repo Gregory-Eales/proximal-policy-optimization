@@ -5,19 +5,10 @@ class Buffer(object):
 
     def __init__(self):
 
-        # store actions
         self.action_buffer = []
-
-        # store old actions
         self.old_action_buffer = []
-
-        # store state
         self.observation_buffer = []
-
-        # store reward
         self.reward_buffer = []
-
-        # store advantage
         self.advantage_buffer = []
 
         self.old_policy = None
@@ -38,19 +29,10 @@ class Buffer(object):
         self.advantage_buffer.append(adv)
 
     def clear_buffer(self):
-        # store actions
         self.action_buffer = []
-
-        # store old actions
         self.old_action_buffer = []
-
-        # store state
         self.observation_buffer = []
-
-        # store reward
         self.reward_buffer = []
-
-        # store advantage
         self.advantage_buffer = []
 
     def get_tensors(self):

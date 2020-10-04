@@ -1,30 +1,30 @@
 import torch
 from tqdm import tqdm
 import numpy as np
-from matplotlib import pyplot as plt
 
-from .policy_network import PolicyNetwork
-from .value_network import ValueNetwork
+
+from .actor import Actor
+from .critic import Critic
 from .buffer import Buffer
 
-class PPO(object):
+class PPOAgent(object):
 
-	def __init__(self, alpha=69.0005, in_dim=3, out_dim=2):
+	def __init__(self, alpha=0.0005, in_dim=3, out_dim=2):
 		# store parameters
 		self.alpha = alpha
 		self.input_dims = in_dim
 		self.output_dims = out_dim
 
 		# initialize policy network
-		self.policy_network = PolicyNetwork(0.0005, in_dim, out_dim)
+		self.actor = PolicyNetwork(0.0005, in_dim, out_dim)
 
 		# initialize old policy
-		self.old_policy_network = PolicyNetwork(alpha=alpha, in_dim=in_dim, out_dim=out_dim)
-		state_dict = self.policy_network.state_dict()
-		self.old_policy_network.load_state_dict(state_dict)
+		self.old_actor = PolicyNetwork(alpha=alpha, in_dim=in_dim, out_dim=out_dim)
+		state_dict = self.actor.state_dict()
+		self.old_actor.load_state_dict(state_dict)
 
 		# initialize value network
-		self.value_network = ValueNetwork(0.0001, in_dim, 1)
+		self.critic = ValueNetwork(0.0001, in_dim, 1)
 
 		# initialize vpg buffer
 		self.buffer = Buffer()
@@ -38,7 +38,7 @@ class PPO(object):
 		s = torch.tensor(s).reshape(-1, len(s)).float()
 
 		# get policy prob distrabution
-		prediction = self.policy_network.forward(s)
+		prediction = self.actor.forward(s)
 
 		# get action probabilities
 		action_probabilities = torch.distributions.Categorical(prediction)
@@ -50,7 +50,7 @@ class PPO(object):
 		log_prob = (action_probabilities.probs[0][action]).reshape(1, 1)
 
 		# get old prob
-		old_p = self.old_policy_network.forward(s)
+		old_p = self.old_actor.forward(s)
 		old_ap = torch.distributions.Categorical(old_p)
 		old_log_prob = (old_ap.probs[0][action]).reshape(1, 1)
 
@@ -62,10 +62,10 @@ class PPO(object):
 		prev_observation = torch.from_numpy(prev_observation).float()
 
 		# compute state value
-		v = self.value_network.forward(prev_observation)
+		v = self.critic.forward(prev_observation)
 
 		# compute action function value
-		q = self.value_network.forward(observation)
+		q = self.critic.forward(observation)
 
 		# calculate advantage
 		a = q - v + 1
@@ -78,16 +78,16 @@ class PPO(object):
 		observations, actions, old_actions, rewards, advantages = self.buffer.get_tensors()
 
 		# set state dict
-		state_dict = self.policy_network.state_dict()
-		self.old_policy_network.load_state_dict(state_dict)
+		state_dict = self.actor.state_dict()
+		self.old_actor.load_state_dict(state_dict)
 
 		r = (old_actions.detach())/actions
 
 		# update policy
-		self.policy_network.optimize(r, advantages, iter=1)
+		self.actor.optimize(r, advantages, iter=1)
 
 		# update value network
-		self.value_network.optimize(observations, rewards, epochs=iter)
+		self.critic.optimize(observations, rewards, epochs=iter)
 
 	def train(self, env, n_epoch, n_steps, render=False, verbos=True):
 
@@ -187,21 +187,9 @@ class PPO(object):
 			# plot
 			average_rewards.append(np.sum(episode_lengths)/len(episode_lengths))
 			highest_rewards.append(max(episode_lengths))
-			plt.title("Reward per Epoch")
-			plt.xlabel("Epoch")
-			plt.ylabel("Reward")
-			plt.plot(np.array(average_rewards), label="average reward")
-			plt.plot(highest_rewards, label="highest reward")
-			plt.legend(loc="upper left")
-			plt.draw()
-			"""
-			if epoch%10 == 0:
-				plt.savefig('reward_img/epoch{}.png'.format(epoch))
-			"""
-			plt.pause(0.0001)
-			plt.clf()
+			
 			if average_rewards[-1] > 120:
-				torch.save(self.policy_network.state_dict(), "policy_params.pt")
+				torch.save(self.actor.state_dict(), "policy_params.pt")
 
 	def play(self, env):
 
@@ -231,9 +219,9 @@ def main():
 
 	env = gym.make('CartPole-v0')
 
-	vpg = PPO(alpha=0.001, input_dims=4, output_dims=2)
+	ppo = PPO(alpha=0.001, input_dims=4, output_dims=2)
 
-	vpg.train(env, n_epoch=1000, n_steps=800, render=False, verbos=False)
+	train(env, n_epoch=1000, n_steps=800, render=False, verbos=False)
 
 if __name__ == "__main__":
 	main()

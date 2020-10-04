@@ -36,15 +36,33 @@ class ValueNetwork(torch.nn.Module):
         self.relu = torch.nn.LeakyReLU()
         self.sigmoid = torch.nn.Sigmoid()
         self.tanh = torch.nn.Tanh()
+        self.conv1 = torch.nn.Conv2d(3, 32, kernel_size=4, stride=2)
+        self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=4, stride=2)
+        self.conv3 = torch.nn.Conv2d(64, 128, kernel_size=4, stride=2)
+        self.conv4 = torch.nn.Conv2d(128, 256, kernel_size=4, stride=2)
 
     def forward(self, x):
-        x = torch.Tensor(x).to(self.device)
-        out = self.fc1(x)
+
+        out = torch.Tensor(x).to(self.device)
+
+        out = self.conv1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = self.relu(out)
+        out = self.conv3(out)
+        out = self.relu(out)
+        out = self.conv4(out)
+        out = self.relu(out)
+
+        out = out.reshape(-1, 1024)
+
+        out = self.fc1(out)
         out = self.tanh(out)
         out = self.fc2(out)
         out = self.tanh(out)
         out = self.fc3(out)
         out = self.relu(out)
+        
         return out.to(torch.device('cpu:0'))
 
     def normalize(self, x):
@@ -86,6 +104,9 @@ class ValueNetwork(torch.nn.Module):
                 # optimize
                 loss.backward(retain_graph=True)
                 self.optimizer.step()
+
+    def __call__(self, x):
+        
 
 
 
