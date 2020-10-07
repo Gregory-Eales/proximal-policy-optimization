@@ -7,7 +7,7 @@ from .actor import Actor
 from .critic import Critic
 from .buffer import Buffer
 
-class PPOAgent(object):
+class PPO(object):
 
 	def __init__(self, alpha=0.0005, in_dim=3, out_dim=2):
 		# store parameters
@@ -89,126 +89,7 @@ class PPOAgent(object):
 		# update value network
 		self.critic.optimize(observations, rewards, epochs=iter)
 
-	def train(self, env, n_epoch, n_steps, render=False, verbos=True):
 
-		# initialize step variable
-		step = 0
-
-		# historical episode length
-		episode_lengths = [1]
-
-		plt.ion()
-		average_rewards = []
-		highest_rewards = []
-
-		# for n episodes or terminal state:
-		for epoch in range(n_epoch):
-
-			# initial reset of environment
-			observation = env.reset()
-
-			# store observation
-			self.buffer.store_observation(observation)
-
-			episode_lengths = [1]
-
-			print("Epoch: {}".format(epoch))
-			# for t steps:
-			for t in range(n_steps):
-
-				# increment step
-				step += 1
-
-				# render env screen
-				if render: env.render()
-
-				# get action, and network policy prediction
-				action, log_prob, old_log_prob = self.act(observation)
-
-				# store action
-				self.buffer.store_action(log_prob)
-
-				# store old action
-				self.buffer.store_old_action(old_log_prob)
-
-				# get state + reward
-				observation, reward, done, info = env.step(action)
-
-				# store observation
-				self.buffer.store_observation(observation)
-
-				# store rewards
-				self.buffer.store_reward(reward)
-
-				# calculate advantage
-				a = self.calculate_advantages(self.buffer.observation_buffer[-1]
-				, self.buffer.observation_buffer[-2])
-
-				# store advantage
-				self.buffer.store_advantage(a)
-
-				# check if episode is terminal
-				if done or t == n_steps-1:
-
-					for s in reversed(range(1, step+1)):
-
-						update = 0
-
-						for k in reversed(range(1, s+1)):
-							update += self.buffer.reward_buffer[-k]*(0.99**k)
-
-						self.buffer.reward_buffer[-s] += update
-
-					# change terminal reward to zero
-					self.buffer.reward_buffer[-1] = 0
-
-					# print time step
-					if verbos:
-						#print("Episode finished after {} timesteps".format(step+1))
-						pass
-
-					episode_lengths.append(step)
-
-					# reset step counter
-					step = 0
-
-					# reset environment
-					observation = env.reset()
-
-			# update model
-			self.update(iter=80)
-			step=0
-			self.buffer.clear_buffer()
-			print("Average Episode Length: {}".format(
-			np.sum(episode_lengths)/len(episode_lengths)))
-			print("Largest Episode Length: {}".format(max(episode_lengths)))
-
-
-			# plot
-			average_rewards.append(np.sum(episode_lengths)/len(episode_lengths))
-			highest_rewards.append(max(episode_lengths))
-			
-			if average_rewards[-1] > 120:
-				torch.save(self.actor.state_dict(), "policy_params.pt")
-
-	def play(self, env):
-
-		for i in range(1):
-
-			# initial reset of environment
-			observation = env.reset()
-			done = False
-			frame = 0
-			while not done:
-				frame+=1
-				img = env.render(mode="rgb_array")
-				scipy.misc.imsave('img/gif/img{}.jpg'.format(frame), img)
-
-				# get action, and network policy prediction
-				action, log_prob = self.act(observation)
-
-				# get state + reward
-				observation, reward, done, info = env.step(action)
 
 def main():
 
