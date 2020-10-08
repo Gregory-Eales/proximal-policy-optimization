@@ -1,11 +1,28 @@
 import torch
 from tqdm import tqdm
 import numpy as np
+import random
 
 
 from .actor import Actor
 from .critic import Critic
 from .buffer import Buffer
+
+
+class Agent():
+
+    def __init__(self):
+        
+        self.reward = []
+
+    def act(self, state):
+        return random.randint(0, 16)
+
+    def store(self, action, state, reward, prev_state):
+        self.reward.append(reward)
+
+    def update(self):
+        pass
 
 class PPO(object):
 

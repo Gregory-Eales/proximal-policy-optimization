@@ -2,11 +2,11 @@ import torch
 from tqdm import tqdm
 import numpy as np
 
-class PolicyNetwork(torch.nn.Module):
+class Actor(torch.nn.Module):
 
     def __init__(self, alpha, in_dim, out_dim, epsilon=0.1):
 
-        super(PolicyNetwork, self).__init__()
+        super(Actor, self).__init__()
 
         self.in_dim = in_dim
         self.out_dim = out_dim

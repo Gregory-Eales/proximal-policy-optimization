@@ -9,21 +9,6 @@ import time
 from modules import *
 from utils import *
 
-class Agent():
-
-    def __init__(self):
-        
-        self.reward = []
-
-    def act(self, state):
-        return random.randint(0, 16)
-
-    def store(self, action, state, reward, prev_state):
-        self.reward.append(reward)
-
-    def update(self):
-        pass
-
 
 def train(agent, env, n_epoch, n_steps):
 
