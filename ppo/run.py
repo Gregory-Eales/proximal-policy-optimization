@@ -3,11 +3,14 @@ import torch
 from torch.utils.data import DataLoader
 from argparse import ArgumentParser
 from procgen import ProcgenEnv
-from ppo.ppo import PPO
+import gym3
+from procgen import ProcgenGym3Env
+
+#from ppo.ppo import PPO
 
 
 def run():
-    env = ProcgenEnv(env_name="coinrun", render_mode="rgb_array")
+    env = ProcgenGym3Env(num=1, env_name="coinrun", render_mode="rgb_array")
     env = gym3.ViewerWrapper(env, info_key="rgb")
     step = 0
     for i in range(100):
@@ -17,7 +20,7 @@ def run():
         print(f"step {step} reward {rew} first {first}")
         step += 1
 
-    
+    """    
     ppo.policy_network.load_state_dict(torch.load("policy_params.pt"))
 
     torch.manual_seed(1)
@@ -31,7 +34,7 @@ def run():
 
     plt.plot(ppo.hist_length)
     plt.show()
-
+    """
 
 
 if __name__ == '__main__':

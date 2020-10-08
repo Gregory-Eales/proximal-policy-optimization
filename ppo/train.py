@@ -1,107 +1,60 @@
 from argparse import ArgumentParser
+from tqdm import tqdm
 import os
+import random
+import gym
+import gym3
+import time
 
-import modules
-import utils
+from modules import *
+from utils import *
 
+class Agent():
 
-def train(
-    agent,
-    env,
-    n_epoch,
-    n_steps,
-    ):
-
-        # initialize step variable
-        step = 0
-
-        # historical episode length
-        episode_lengths = [1]
-
-        plt.ion()
-        average_rewards = []
-        highest_rewards = []
-
-        # for n episodes or terminal state:
-        for epoch in range(n_epoch):
-
-            # initial reset of environment
-            observation = env.reset()
-
-            
-
-            
-            # for t steps:
-            for t in range(n_steps):
-
-                # increment step
-                step += 1
-
-                # get action, and network policy prediction
-                action, log_prob, old_log_prob = self.act(observation)
-
-                # store action
-                self.buffer.store_action(log_prob)
-
-                # store old action
-                self.buffer.store_old_action(old_log_prob)
-
-                # get state + reward
-                observation, reward, done, info = env.step(action)
-
-                # store observation
-                self.buffer.store_observation(observation)
-
-                # store rewards
-                self.buffer.store_reward(reward)
-
-                # calculate advantage
-                a = self.calculate_advantages(self.buffer.observation_buffer[-1]
-                , self.buffer.observation_buffer[-2])
-
-                # store advantage
-                self.buffer.store_advantage(a)
-
-                # check if episode is terminal
-                if done or t == n_steps-1:
-
-                    for s in reversed(range(1, step+1)):
-
-                        update = 0
-
-                        for k in reversed(range(1, s+1)):
-                            update += self.buffer.reward_buffer[-k]*(0.99**k)
-
-                        self.buffer.reward_buffer[-s] += update
-
-                    # change terminal reward to zero
-                    self.buffer.reward_buffer[-1] = 0
-
-                    # print time step
-                    if verbos:
-                        #print("Episode finished after {} timesteps".format(step+1))
-                        pass
-
-                    episode_lengths.append(step)
-
-                    # reset step counter
-                    step = 0
-
-                    # reset environment
-                    observation = env.reset()
-
-            # update model
-            self.update(iter=80)
-            step=0
-            self.buffer.clear_buffer()
-            
+    def __init__(self):
         
-            
-          
+        self.reward = []
+
+    def act(self, state):
+        return random.randint(0, 16)
+
+    def store(self, action, state, reward, prev_state):
+        self.reward.append(reward)
+
+    def update(self):
+        pass
+
+
+def train(agent, env, n_epoch, n_steps):
+
+        for epoch in tqdm(range(n_epoch)):
+
+            prev_state = env.reset()
+            done = False
+
+            while not done:
+
+                env.render("human")
+
+                action = agent.act(prev_state)
+
+                state, reward, done, info = env.step(action)
+
+                agent.store(action, state, reward, prev_state)
+
+                prev_state = state
+
+                if done:
+                    prev_state = env.reset()
+
+
+            agent.update()
+
+        
 
 def run_experiment(
     experiment_name,
-    environement_name,
+    environment_name,
     log,
     graph,
     random_seeds,
@@ -138,12 +91,20 @@ def run_experiment(
 
     # setup experiment path
 
-    agent = PPO()
+    exp_path = create_exp_dir(experiment_name)
 
+    #agent = PPO()
+    #env = ProcgenGym3Env(num=1, env_name="coinrun", render_mode="rgb_array")
+    #env = gym3.ViewerWrapper(env, info_key="rgb")
+    agent = Agent()
+    
+    env = gym.make("procgen:procgen-coinrun-v0")
+    
+    t = time.time()
+    train(agent, env, n_episodes, n_steps)
+    print(time.time()-t)
 
-
-
-
+    print(len(agent.reward))
 
 if __name__ == '__main__':
     
@@ -152,7 +113,7 @@ if __name__ == '__main__':
 
     # experiment and  environment
     parser.add_argument('--experiment_name', default="default", type=str)
-    parser.add_argument('--environment name', default="couinrun")
+    parser.add_argument('--environment_name', default="couinrun")
 
     # saving options
     parser.add_argument('--log', default=True, type=bool)
@@ -161,9 +122,7 @@ if __name__ == '__main__':
     # training params
     parser.add_argument('--random_seeds', default=list(range(10)), type=list)
     parser.add_argument('--n_episodes', default=100, type=int)
-    parser.add_argument('--n_steps', default=200, type=int)
-    parser.add_argument('--batch_sz', default=16, type=int)
-    parser.add_argument('--gamma', default=16, type=int)
+    parser.add_argument('--n_steps', default=1000, type=int)
     parser.add_argument('--batch_sz', default=16, type=int)
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--training_epochs', default=10, type=int)
@@ -176,6 +135,17 @@ if __name__ == '__main__':
 
     params = parser.parse_args()
 
-    #run_experiment(params)
+    run_experiment(
+        experiment_name=params.experiment_name,
+        environment_name=params.environment_name,
+        log=params.log,
+        graph=params.graph,
+        random_seeds=params.random_seeds,
+        n_episodes=params.n_episodes,
+        n_steps=params.n_steps,
+        actor_lr=params.actor_lr,
+        critic_lr=params.critic_lr,
+        epsilon=params.epsilon
+        )
     
     
