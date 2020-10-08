@@ -4,6 +4,7 @@ import os
 import random
 import gym
 import gym3
+from procgen import ProcgenGym3Env
 import time
 
 from modules import *
@@ -14,26 +15,20 @@ def train(agent, env, n_epoch, n_steps):
 
         for epoch in tqdm(range(n_epoch)):
 
-            prev_state = env.reset()
-            done = False
+            for i in range(n_steps):
+    
+                action = agent.act(prev_state['rgb'])
 
-            while not done:
-
-                env.render("human")
-
-                action = agent.act(prev_state)
-
-                state, reward, done, info = env.step(action)
+                env.act(action)
 
                 agent.store(action, state, reward, prev_state)
 
                 prev_state = state
 
-                if done:
-                    prev_state = env.reset()
 
 
-            agent.update()
+
+        agent.update()
 
         
 
@@ -45,6 +40,7 @@ def run_experiment(
     random_seeds,
     n_episodes,
     n_steps,
+    n_envs,
     actor_lr,
     critic_lr,
     epsilon
@@ -79,17 +75,38 @@ def run_experiment(
     exp_path = create_exp_dir(experiment_name)
 
     #agent = PPO()
-    #env = ProcgenGym3Env(num=1, env_name="coinrun", render_mode="rgb_array")
-    #env = gym3.ViewerWrapper(env, info_key="rgb")
-    agent = Agent()
+    """
+    env = ProcgenGym3Env(
+        num=n_envs,
+        env_name="coinrun",
+        render_mode="rgb_array"
+        )
+    """
+    agent = Agent(n_envs=n_envs)
     
-    env = gym.make("procgen:procgen-coinrun-v0")
+    #env = gym.make("procgen:procgen-coinrun-v0")
     
+    #train(agent, env, n_episodes, n_steps)
+
+    import gym3
+    from procgen import ProcgenGym3Env
+
+    env = ProcgenGym3Env(num=1, env_name="coinrun")
+    step = 0
     t = time.time()
-    train(agent, env, n_episodes, n_steps)
+    for i in tqdm(range(1000)):
+        env.act()
+        rew, obs, first = env.observe()
+        #print(f"step {step} reward {rew} first {first}")
+        step += 1
+
+    print(rew.shape)
+    print(obs["rgb"].shape)
+    print(first)
     print(time.time()-t)
 
-    print(len(agent.reward))
+    
+    generate_graphs(agent, exp_path)
 
 if __name__ == '__main__':
     
@@ -106,11 +123,12 @@ if __name__ == '__main__':
 
     # training params
     parser.add_argument('--random_seeds', default=list(range(10)), type=list)
-    parser.add_argument('--n_episodes', default=100, type=int)
+    parser.add_argument('--n_episodes', default=1, type=int)
     parser.add_argument('--n_steps', default=1000, type=int)
     parser.add_argument('--batch_sz', default=16, type=int)
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--training_epochs', default=10, type=int)
+    parser.add_argument('--n_envs', default=4, type=int)
 
     # model params
     parser.add_argument('--actor_lr', default=2e-1, type=float)
@@ -128,6 +146,7 @@ if __name__ == '__main__':
         random_seeds=params.random_seeds,
         n_episodes=params.n_episodes,
         n_steps=params.n_steps,
+        n_envs=params.n_envs,
         actor_lr=params.actor_lr,
         critic_lr=params.critic_lr,
         epsilon=params.epsilon

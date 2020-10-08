@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 import numpy as np
 import random
+import gym3
 
 
 from .actor import Actor
@@ -11,12 +12,13 @@ from .buffer import Buffer
 
 class Agent():
 
-    def __init__(self):
+    def __init__(self, n_envs):
         
+        self.n_envs = n_envs
         self.reward = []
 
     def act(self, state):
-        return random.randint(0, 16)
+        return gym3.types_np.sample(15, bshape=(self.n_envs,))
 
     def store(self, action, state, reward, prev_state):
         self.reward.append(reward)

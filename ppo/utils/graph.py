@@ -3,16 +3,18 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
+def generate_graphs(agent, path=""):
+
+	reward_per_epoch(agent.reward, path=path)
+
 def reward_per_epoch(reward, path=""):
 
 	plt.title("Reward per Epoch")
 	plt.xlabel("Epoch")
 	plt.ylabel("Reward")
-	plt.plot(reward[0], label="average reward")
-	plt.plot(reward[1])
-	plt.fill(list(range(10)), list(range(10)))
+	plt.plot(reward, label="reward")
 	plt.legend(loc="upper left")
-	plt.savefig('{}reward_per_epoch.png'.format(path))
+	plt.savefig('{}/graphs/reward_per_epoch.png'.format(path))
 
 
 	"""
