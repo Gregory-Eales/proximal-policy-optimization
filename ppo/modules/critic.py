@@ -5,10 +5,8 @@ from tqdm import tqdm
 
 class Critic(torch.nn.Module):
 
-    def __init__(self, alpha, input_dims, output_dims):
+    def __init__(self, critic_lr, critic_epochs):
 
-        self.input_dims = input_dims
-        self.output_dims = output_dims
 
         # inherit from nn module class
         super(Critic, self).__init__()
@@ -17,7 +15,7 @@ class Critic(torch.nn.Module):
         self.initialize_network()
 
         # define optimizer
-        self.optimizer = torch.optim.Adam(lr=alpha, params=self.parameters())
+        self.optimizer = torch.optim.Adam(lr=critic_lr, params=self.parameters())
 
         # define loss
         self.loss = torch.nn.MSELoss()
@@ -32,9 +30,9 @@ class Critic(torch.nn.Module):
     def initialize_network(self):
 
                 # define network components
-        self.fc1 = torch.nn.Linear(self.input_dims, 64)
+        self.fc1 = torch.nn.Linear(1024, 64)
         self.fc2 = torch.nn.Linear(64, 64)
-        self.fc3 = torch.nn.Linear(64, self.output_dims)
+        self.fc3 = torch.nn.Linear(64, 1)
         self.relu = torch.nn.LeakyReLU()
         self.sigmoid = torch.nn.Sigmoid()
         self.tanh = torch.nn.Tanh()
@@ -106,16 +104,12 @@ class Critic(torch.nn.Module):
                 loss.backward(retain_graph=True)
                 self.optimizer.step()
 
-    def __call__(self, x):
-        pass
-
-
 def main():
 
-    t1 = torch.rand(100, 3)
-    vn = ValueNetwork(0.01, 3, 1)
-    vn.optimize(iter=100, state=t1, disc_reward=torch.rand(100, 1))
-
+    t1 = torch.rand(10, 3, 64, 64)
+    vn = Critic(0.01, 3, 1)
+    #vn.optimize(iter=100, state=t1, disc_reward=torch.rand(100, 1))
+    print(vn(t1))
 
 if __name__ == "__main__":
     main()

@@ -5,7 +5,7 @@ import numpy as np
 
 def generate_graphs(agent, path=""):
 
-	reward_per_epoch(agent.reward, path=path)
+	reward_per_epoch(agent.get_rewards(), path=path)
 
 def reward_per_epoch(reward, path=""):
 

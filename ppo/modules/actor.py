@@ -4,15 +4,14 @@ import numpy as np
 
 class Actor(torch.nn.Module):
 
-    def __init__(self, alpha, in_dim, out_dim, epsilon=0.1):
+    def __init__(self, actor_lr, actor_epochs, epsilon):
 
         super(Actor, self).__init__()
 
-        self.in_dim = in_dim
-        self.out_dim = out_dim
+    
         self.epsilon = epsilon
         self.define_network()
-        self.optimizer = torch.optim.Adam(params=self.parameters(), lr=alpha)
+        self.optimizer = torch.optim.Adam(params=self.parameters(), lr=actor_lr)
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu:0')
         self.to(self.device)
         self.prev_params = self.parameters()
@@ -22,9 +21,10 @@ class Actor(torch.nn.Module):
         self.leaky_relu = torch.nn.LeakyReLU()
         self.sigmoid = torch.nn.Sigmoid()
         self.tanh = torch.nn.Tanh()
+        self.softmax = torch.nn.Softmax(dim=0)
         self.l1 = torch.nn.Linear(1024, 512)
         self.l2 = torch.nn.Linear(512, 64)
-        self.l3 = torch.nn.Linear(64, self.out_dim)
+        self.l3 = torch.nn.Linear(64, 15)
         self.conv1 = torch.nn.Conv2d(3, 32, kernel_size=4, stride=2)
         self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = torch.nn.Conv2d(64, 128, kernel_size=4, stride=2)
@@ -44,7 +44,7 @@ class Actor(torch.nn.Module):
 
     def forward(self, x):
 
-        out = torch.Tensor(x).to(self.device)
+        out = torch.Tensor(x).float().to(self.device)
 
         out = self.conv1(out)
         out = self.relu(out)
@@ -63,8 +63,9 @@ class Actor(torch.nn.Module):
         out = self.l2(out)
         out = self.tanh(out)
         out = self.l3(out)
+        out = self.softmax(out)
 
-        return out.to(torch.device('cpu:0'))
+        return out.to(torch.device('cpu:0')).detach()
 
     def optimize(self, r, adv, iter=1):
 
@@ -102,9 +103,9 @@ class Actor(torch.nn.Module):
 def main():
 
     t1 = torch.ones(1, 3, 64, 64)
-    pn = PolicyNetwork(0.01, 3, 1)
-    print(pn(t1))
-    print(pn.parameters())
+    pn = Actor(0.01, 3, 1)
+    print(pn.device)
+    print(pn(t1).shape)
 
 
 if __name__ == "__main__":

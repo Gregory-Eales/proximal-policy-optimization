@@ -5,42 +5,52 @@ class Buffer(object):
 
     def __init__(self):
 
-        self.action_buffer = []
-        self.old_action_buffer = []
-        self.observation_buffer = []
-        self.reward_buffer = []
-        self.advantage_buffer = []
+        self.log_probs = []
+        self.k_log_probs = []
+        self.states = []
+        self.prev_states = []
+        self.rewards = []
+        self.advantages = []
+        self.firsts = []
 
-        self.old_policy = None
+    def store(self, state, reward, prev_state, first):
+        self.store_state(state)
+        self.store_reward(reward)
+        self.store_firsts(first)
+        self.store_prev_states(prev_state)
 
-    def store_observation(self, obs):
-        self.observation_buffer.append(obs)
+    def store_prev_states(self, prev_state):
+        self.prev_states.append(prev_state)
 
-    def store_reward(self, rwrd):
-        self.reward_buffer.append(rwrd)
+    def store_state(self, state):
+        self.states.append(state)
 
-    def store_action(self, act):
-        self.action_buffer.append(act)
+    def store_reward(self, reward):
+        self.rewards.append(reward)
 
-    def store_old_action(self, old_act):
-        self.old_action_buffer.append(old_act)
+    def store_firsts(self, first):
+        self.firsts.append(first)
+        
+    def store_log_probs(self, log_prob, k_log_prob):
+        self.log_probs.append(log_prob)
+        self.k_log_probs.append(k_log_prob)
 
-    def store_advantage(self, adv):
-        self.advantage_buffer.append(adv)
+    def store_advantage(self, advantage):
+        self.advantages.append(advantage)
 
-    def clear_buffer(self):
-        self.action_buffer = []
-        self.old_action_buffer = []
-        self.observation_buffer = []
-        self.reward_buffer = []
-        self.advantage_buffer = []
+    def clear(self):
+        self.log_probs = []
+        self.k_log_probs = []
+        self.states = []
+        self.rewards = []
+        self.advantages = []
 
-    def get_tensors(self):
+    def get(self):
 
-        observations = torch.Tensor(self.observation_buffer[1:])
-        actions = torch.cat(self.action_buffer)
-        old_actions = torch.cat(self.old_action_buffer)
-        rewards = torch.Tensor(self.reward_buffer).reshape(-1, 1)
-        advantages = torch.Tensor(self.advantage_buffer)
+        states = torch.Tensor(self.states)
+        log_probs = torch.cat(self.log_probs)
+        k_log_probs = torch.cat(self.k_log_probs)
+        rewards = torch.Tensor(self.rewards)
+        advantages = torch.Tensor(self.advantage)
 
-        return observations, actions, old_actions, rewards, advantages
+        return states, actions, k_actions, rewards, advantages

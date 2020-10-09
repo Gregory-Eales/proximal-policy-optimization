@@ -15,6 +15,7 @@ def run():
     step = 0
     for i in range(100):
         
+        print(env.ac_space)
         env.act(gym3.types_np.sample(env.ac_space, bshape=(env.num,)))
         rew, obs, first = env.observe()
         print(f"step {step} reward {rew} first {first}")

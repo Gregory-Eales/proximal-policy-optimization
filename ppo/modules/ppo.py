@@ -10,83 +10,101 @@ from .critic import Critic
 from .buffer import Buffer
 
 
-class Agent():
+class RandomAgent():
 
-    def __init__(self, n_envs):
-        
-        self.n_envs = n_envs
-        self.reward = []
+	def __init__(self, n_envs):
 
-    def act(self, state):
-        return gym3.types_np.sample(15, bshape=(self.n_envs,))
+		self.n_envs = n_envs
+		self.reward = []
 
-    def store(self, action, state, reward, prev_state):
-        self.reward.append(reward)
+	def act(self, state):
+		return np.random.randint(0, high=15, size=[self.n_envs, ])
 
-    def update(self):
-        pass
+	def store(self, action, state, reward, prev_state):
+		self.reward.append(reward)
+
+	def update(self):
+		pass
+
 
 class PPO(object):
 
-	def __init__(self, alpha=0.0005, in_dim=3, out_dim=2):
-		# store parameters
-		self.alpha = alpha
-		self.input_dims = in_dim
-		self.output_dims = out_dim
+	def __init__(
+			self,
+			actor_lr,
+			critic_lr,
+			batch_sz,
+			gamma,
+			epsilon,
+			actor_epochs,
+			critic_epochs,
+	):
 
 		# initialize policy network
-		self.actor = PolicyNetwork(0.0005, in_dim, out_dim)
+		self.actor = Actor(
+			actor_lr=actor_lr,
+			actor_epochs=actor_epochs,
+			epsilon=epsilon
+		)
 
-		# initialize old policy
-		self.old_actor = PolicyNetwork(alpha=alpha, in_dim=in_dim, out_dim=out_dim)
-		state_dict = self.actor.state_dict()
-		self.old_actor.load_state_dict(state_dict)
+		self.k_actor = Actor(
+			actor_lr=actor_lr,
+			actor_epochs=actor_epochs,
+			epsilon=epsilon
+		)
 
-		# initialize value network
-		self.critic = ValueNetwork(0.0001, in_dim, 1)
+		pp = 0
+		for p in list(self.actor.parameters()):
+			nn = 1
+			for s in list(p.size()):
+				nn = nn*s
+				pp += nn
+		print(pp)
 
-		# initialize vpg buffer
+		self.critic = Critic(
+			critic_lr=critic_lr,
+			critic_epochs=critic_epochs
+		)
+
+		self.transfer_weights()
+
 		self.buffer = Buffer()
-
-		# historical episode length
-		self.hist_length = []
 
 	def act(self, s):
 
 		# convert to torch tensor
-		s = torch.tensor(s).reshape(-1, len(s)).float()
+		s = torch.tensor(s).reshape(-1, 3, 64, 64).float()
 
 		# get policy prob distrabution
-		prediction = self.actor.forward(s)
-
-		# get action probabilities
+		prediction = self.actor(s)
 		action_probabilities = torch.distributions.Categorical(prediction)
+		actions = action_probabilities.sample()
 
-		# sample action
-		action = action_probabilities.sample()
-		action = action.item()
-		# get log prob
-		log_prob = (action_probabilities.probs[0][action]).reshape(1, 1)
+		log_prob = action_probabilities.log_prob(actions)
 
-		# get old prob
-		old_p = self.old_actor.forward(s)
-		old_ap = torch.distributions.Categorical(old_p)
-		old_log_prob = (old_ap.probs[0][action]).reshape(1, 1)
+		k_p = self.k_actor(s)
+		k_ap = torch.distributions.Categorical(k_p)
+		k_log_prob = k_ap.log_prob(actions)
 
-		return action, log_prob, old_log_prob
+		self.buffer.store_log_probs(log_prob, k_log_prob)
 
-	def calculate_advantages(self, observation, prev_observation):
+		return actions.detach().numpy()
 
-		observation = torch.from_numpy(observation).float()
-		prev_observation = torch.from_numpy(prev_observation).float()
+	def transfer_weights(self):
+		state_dict = self.actor.state_dict()
+		self.k_actor.load_state_dict(state_dict)
+
+	def store(self, state, reward, prev_state, first):
+		self.buffer.store(state, reward, prev_state, first)
+
+	def calculate_advantages(self, state, prev_state):
+
+		state = torch.from_numpy(state).float()
+		prev_state = torch.from_numpy(prev_state).float()
 
 		# compute state value
-		v = self.critic.forward(prev_observation)
-
-		# compute action function value
-		q = self.critic.forward(observation)
-
-		# calculate advantage
+		v = self.critic(prev_state)
+		q = self.critic(state)
 		a = q - v + 1
 
 		return a.detach().numpy()
@@ -94,22 +112,15 @@ class PPO(object):
 	def update(self, iter=80):
 
 		# returns buffer values as pytorch tensors
-		observations, actions, old_actions, rewards, advantages = self.buffer.get_tensors()
+		states, log_probs, k_log_probs, rewards, advantages = self.buffer.get_tensors()
 
-		# set state dict
-		state_dict = self.actor.state_dict()
-		self.old_actor.load_state_dict(state_dict)
+		self.transfer_weights()
 
-		r = (old_actions.detach())/actions
+		self.actor.optimize(log_probs, k_log_probs, advantages, iter=1)
+		self.critic.optimize(states, rewards, epochs=iter)
 
-		# update policy
-		self.actor.optimize(r, advantages, iter=1)
-
-		# update value network
-		self.critic.optimize(observations, rewards, epochs=iter)
-
-
-
+	def get_rewards(self):
+		return self.buffer.rewards
 def main():
 
 	import gym
@@ -122,6 +133,7 @@ def main():
 	ppo = PPO(alpha=0.001, input_dims=4, output_dims=2)
 
 	train(env, n_epoch=1000, n_steps=800, render=False, verbos=False)
+
 
 if __name__ == "__main__":
 	main()
