@@ -37,10 +37,17 @@ class Actor(torch.nn.Module):
         x = (x-x_mean)/x_std
         return torch.Tensor(x)
 
-    def loss(self, r_theta, advantages):
+    def loss(self, log_probs, k_log_probs, advantages):
 
-        clipped_r = torch.clamp(r_theta, 1.0 - self.epsilon, 1.0 + self.epsilon)
-        return torch.min(r_theta*advantages, clipped_r*advantages)
+        r_theta = log_probs/k_log_probs
+
+        clipped_r = torch.clamp(
+            r_theta,
+            1.0 - self.epsilon,
+            1.0 + self.epsilon
+            )
+
+        return torch.min(r_theta*advantages, clipped_r*advantages).mean()
 
     def forward(self, x):
 
@@ -67,37 +74,16 @@ class Actor(torch.nn.Module):
 
         return out.to(torch.device('cpu:0')).detach()
 
-    def optimize(self, r, adv, iter=1):
+    def optimize(
+        self,
+        log_probs,
+        k_log_probs,
+        advantages
+        ):
 
-        adv = self.normalize(adv)
-
-        n_samples = r.shape[0]
-        num_batch = int(n_samples/5)
-
-
-        # calculate loss
-        loss = self.loss(r, adv)
-
-        l = []
-
-        for batch in range(5):
-            l.append(torch.sum(loss[batch*num_batch:(batch+1)*num_batch]))
-
-        print("Training Policy Net:")
-        for i in tqdm(range(iter)):
-
-            for batch in range(5):
-
-
-                torch.cuda.empty_cache()
-                # zero the parameter gradients
-                self.optimizer.zero_grad()
-
-                # optimize
-                l[batch].backward(retain_graph=True)
-
-                self.optimizer.step()
-
+        loss = self.loss(log_probs, k_log_probs, advantages)
+        loss.backward(retain_graph=True)
+        self.optimizer.step()
 
 
 def main():

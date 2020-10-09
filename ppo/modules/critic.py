@@ -72,37 +72,47 @@ class Critic(torch.nn.Module):
         x = (x-x_mean)/x_std
         return x
 
-    def optimize(self, observations, rewards, epochs=10):
+    def optimize(
+        self,
+        states=s,
+        rewards=d_r,
+        epochs=self.critic_epochs,
+        batch_sz=self.batch_size
+        ):
 
+        """
         observations = self.normalize(observations.tolist())
         rewards = self.normalize(rewards.tolist())
-
-        observations = torch.Tensor(observations.tolist())
-        rewards = torch.Tensor(rewards.tolist())
+        """
 
         n_samples = rewards.shape[0]
-        num_batch = int(n_samples/20)
+        num_batch = int(n_samples//batch_sz)
 
         print("Training Value Net:")
         for i in tqdm(range(epochs)):
 
-            for batch in range(20):
+            for b in range(num_batch):
 
                 torch.cuda.empty_cache()
-                # zero the parameter gradients
                 self.optimizer.zero_grad()
 
-                # make prediction
-                prediction = self.forward(
-                    observations[batch*num_batch:(batch+1)*num_batch])
+                s = states[b*batch_sz:(b+1)*batch_sz]
+                r = rewards[b*batch_sz:(b+1)*batch_sz]
+               
+                p = self.forward(s)
+                loss = self.loss(p, r)
 
-                # calculate loss
-                loss = self.loss(
-                    prediction, rewards[batch*num_batch:(batch+1)*num_batch])
-
-                # optimize
                 loss.backward(retain_graph=True)
                 self.optimizer.step()
+
+            s = states[-batch_sz:-1]
+            r = rewards[-batch_sz:-1]
+
+            p = self.forward(s)
+            loss = self.loss(p, r)
+
+            loss.backward(retain_graph=True)
+            self.optimizer.step()
 
 def main():
 

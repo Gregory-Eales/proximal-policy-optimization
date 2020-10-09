@@ -40,6 +40,14 @@ class PPO(object):
 			critic_epochs,
 	):
 
+		self.actor_lr = actor_lr
+		self.critic_lr  = critic_lr
+		self.batch_sz = batch_sz
+		self.gamma = gamma
+		self.epsilon = epsilon
+		self.actor_epochs = actor_epochs
+		self.critic_epochs = critic_epochs
+
 		# initialize policy network
 		self.actor = Actor(
 			actor_lr=actor_lr,
@@ -52,14 +60,6 @@ class PPO(object):
 			actor_epochs=actor_epochs,
 			epsilon=epsilon
 		)
-
-		pp = 0
-		for p in list(self.actor.parameters()):
-			nn = 1
-			for s in list(p.size()):
-				nn = nn*s
-				pp += nn
-		print(pp)
 
 		self.critic = Critic(
 			critic_lr=critic_lr,
@@ -82,13 +82,22 @@ class PPO(object):
 
 		log_prob = action_probabilities.log_prob(actions)
 
-		k_p = self.k_actor(s)
+		k_p = self.k_actor(s).detach()
 		k_ap = torch.distributions.Categorical(k_p)
 		k_log_prob = k_ap.log_prob(actions)
 
 		self.buffer.store_log_probs(log_prob, k_log_prob)
 
 		return actions.detach().numpy()
+
+	def discount_rewards(self):
+		firsts = np.array(self.buffer.firsts).reshape([-1, 1]).astype('int32')
+		rewards = np.array(self.buffer.rewards).reshape([-1, 1])
+
+		for i in reversed(range(rewards.shape[0]-1)):
+			rewards[i] += rewards[i+1]*self.gamma*(1-firsts[i])
+
+		self.buffer.disc_rewards=rewards
 
 	def transfer_weights(self):
 		state_dict = self.actor.state_dict()
@@ -97,10 +106,10 @@ class PPO(object):
 	def store(self, state, reward, prev_state, first):
 		self.buffer.store(state, reward, prev_state, first)
 
-	def calculate_advantages(self, state, prev_state):
+	def calculate_advantages(self, states, prev_states):
 
-		state = torch.from_numpy(state).float()
-		prev_state = torch.from_numpy(prev_state).float()
+		state = torch.from_numpy(states).float()
+		prev_state = torch.from_numpy(prev_states).float()
 
 		# compute state value
 		v = self.critic(prev_state)
@@ -112,15 +121,29 @@ class PPO(object):
 	def update(self, iter=80):
 
 		# returns buffer values as pytorch tensors
-		states, log_probs, k_log_probs, rewards, advantages = self.buffer.get_tensors()
+		s, lp, p_s, k_lp, d_r = self.buffer.get_tensors()
 
 		self.transfer_weights()
 
-		self.actor.optimize(log_probs, k_log_probs, advantages, iter=1)
-		self.critic.optimize(states, rewards, epochs=iter)
+		adv = self.calculate_advantages(s, p_s)
+		
+		self.actor.optimize(
+			log_probs=lp,
+			k_log_probs=k_lp,
+			advantages=adv
+			)
+
+		self.critic.optimize(
+			states=s,
+			rewards=d_r,
+			epochs=self.critic_epochs,
+			batch_sz=self.batch_size
+			)
 
 	def get_rewards(self):
 		return self.buffer.rewards
+
+
 def main():
 
 	import gym
