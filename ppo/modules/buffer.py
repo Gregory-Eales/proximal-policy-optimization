@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from tqdm import tqdm
 
 class Buffer(object):
 
@@ -13,6 +14,8 @@ class Buffer(object):
 		self.disc_rewards = []
 		self.advantages = []
 		self.firsts = []
+
+		self.mean_reward = []
 
 	def store(self, state, reward, prev_state, first):
 		self.store_state(state)
@@ -40,6 +43,9 @@ class Buffer(object):
 		self.advantages = advantage
 
 	def clear(self):
+
+		self.mean_reward.append(np.mean(self.disc_rewards).tolist())
+
 		self.log_probs = []
 		self.k_log_probs = []
 		self.states = []

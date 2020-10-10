@@ -36,28 +36,24 @@ class PPO(object):
 			batch_sz,
 			gamma,
 			epsilon,
-			actor_epochs,
 			critic_epochs,
 	):
 
 		self.actor_lr = actor_lr
-		self.critic_lr  = critic_lr
+		self.critic_lr = critic_lr
 		self.batch_sz = batch_sz
 		self.gamma = gamma
 		self.epsilon = epsilon
-		self.actor_epochs = actor_epochs
 		self.critic_epochs = critic_epochs
 
 		# initialize policy network
 		self.actor = Actor(
 			actor_lr=actor_lr,
-			actor_epochs=actor_epochs,
 			epsilon=epsilon
 		)
 
 		self.k_actor = Actor(
 			actor_lr=actor_lr,
-			actor_epochs=actor_epochs,
 			epsilon=epsilon
 		)
 
@@ -84,7 +80,7 @@ class PPO(object):
 
 		k_p = self.k_actor(s).detach()
 		k_ap = torch.distributions.Categorical(k_p)
-		k_log_prob = k_ap.log_prob(actions)
+		k_log_prob = k_ap.log_prob(actions).detach()
 
 		self.buffer.store_log_probs(log_prob, k_log_prob)
 
@@ -93,11 +89,10 @@ class PPO(object):
 	def discount_rewards(self):
 		firsts = np.array(self.buffer.firsts).reshape([-1, 1]).astype('int32')
 		rewards = np.array(self.buffer.rewards).reshape([-1, 1])
-
-		for i in reversed(range(rewards.shape[0]-1)):
+		for i in tqdm(reversed(range(rewards.shape[0]-1))):
 			rewards[i] += rewards[i+1]*self.gamma*(1-firsts[i])
 
-		self.buffer.disc_rewards=rewards
+		self.buffer.disc_rewards = rewards
 
 	def transfer_weights(self):
 		state_dict = self.actor.state_dict()
@@ -106,26 +101,58 @@ class PPO(object):
 	def store(self, state, reward, prev_state, first):
 		self.buffer.store(state, reward, prev_state, first)
 
-	def calculate_advantages(self, states, prev_states):
+	def calculate_advantages(self, states, prev_states, batch_sz=64):
 
-		state = torch.from_numpy(states).float()
-		prev_state = torch.from_numpy(prev_states).float()
+		a = []
 
-		# compute state value
-		v = self.critic(prev_state)
-		q = self.critic(state)
-		a = q - v + 1
+		n_samples = states.shape[0]
+		num_batch = int(n_samples//batch_sz)
 
-		return a.detach().numpy()
+		for b in tqdm(range(num_batch)):
 
-	def update(self, iter=80):
+			s = states[b*batch_sz:(b+1)*batch_sz]
+			p_s = prev_states[b*batch_sz:(b+1)*batch_sz]
+			v = self.critic(p_s).detach()
+			q = self.critic(s).detach()
+			a.append(q - v + 1)
+			torch.cuda.empty_cache()
+
+		s = states[(b+1)*batch_sz:]
+		p_s = prev_states[(b+1)*batch_sz:]
+		v = self.critic(p_s)
+		q = self.critic(s)
+		a.append(q - v + 1)
+
+		print(states.shape)
+		print(a[0].shape)
+		print(a[1].shape)
+		print(len(a))
+		a = torch.cat(a)
+		print(a.shape)
+
+		return a.detach()
+
+	def update(self):
+
+		self.discount_rewards()
 
 		# returns buffer values as pytorch tensors
-		s, lp, p_s, k_lp, d_r = self.buffer.get_tensors()
+		s, lp, p_s, k_lp, d_r = self.buffer.get()
 
 		self.transfer_weights()
 
 		adv = self.calculate_advantages(s, p_s)
+
+		print(lp.shape)
+		print(k_lp.shape)
+		print(adv.shape)
+
+		self.critic.optimize(
+			states=s,
+			rewards=d_r,
+			epochs=self.critic_epochs,
+			batch_sz=self.batch_sz
+			)
 		
 		self.actor.optimize(
 			log_probs=lp,
@@ -133,16 +160,12 @@ class PPO(object):
 			advantages=adv
 			)
 
-		self.critic.optimize(
-			states=s,
-			rewards=d_r,
-			epochs=self.critic_epochs,
-			batch_sz=self.batch_size
-			)
+		
+
+		self.buffer.clear()
 
 	def get_rewards(self):
-		return self.buffer.rewards
-
+		return self.buffer.mean_reward
 
 def main():
 
