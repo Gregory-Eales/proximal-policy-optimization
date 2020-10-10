@@ -8,7 +8,6 @@ class Actor(torch.nn.Module):
 
 		super(Actor, self).__init__()
 
-	
 		self.epsilon = epsilon
 		self.define_network()
 		self.optimizer = torch.optim.Adam(params=self.parameters(), lr=actor_lr)
@@ -30,16 +29,9 @@ class Actor(torch.nn.Module):
 		self.conv3 = torch.nn.Conv2d(64, 128, kernel_size=4, stride=2)
 		self.conv4 = torch.nn.Conv2d(128, 256, kernel_size=4, stride=2)
 
-	def normalize(self, x):
-		x = np.array(x)
-		x_mean = np.mean(x)
-		x_std = np.std(x) if np.std(x) > 0 else 1
-		x = (x-x_mean)/x_std
-		return torch.Tensor(x)
-
 	def loss(self, log_probs, k_log_probs, advantages):
 
-		r_theta = log_probs/k_log_probs
+		r_theta = torch.exp(log_probs-k_log_probs)
 
 		clipped_r = torch.clamp(
 			r_theta,
@@ -47,29 +39,27 @@ class Actor(torch.nn.Module):
 			1.0 + self.epsilon
 			)
 
-		return torch.min(r_theta*advantages, clipped_r*advantages).mean()
+		return torch.mean(torch.min(r_theta*advantages, clipped_r*advantages))
 
 	def forward(self, x):
 
 		out = torch.Tensor(x).float().to(self.device)
 
 		out = self.conv1(out)
-		out = self.relu(out)
+		out = self.leaky_relu(out)
 		out = self.conv2(out)
-		out = self.relu(out)
+		out = self.leaky_relu(out)
 		out = self.conv3(out)
-		out = self.relu(out)
+		out = self.leaky_relu(out)
 		out = self.conv4(out)
-		out = self.relu(out)
-
+		out = self.leaky_relu(out)
 		
-		out = out.reshape(-1, 1024)
+		out = out.reshape(-1, 2*2*256)
 
-		
 		out = self.l1(out)
-		out = self.tanh(out)
+		out = self.leaky_relu(out)
 		out = self.l2(out)
-		out = self.tanh(out)
+		out = self.leaky_relu(out)
 		out = self.l3(out)
 
 		out = self.softmax(out)
@@ -81,51 +71,13 @@ class Actor(torch.nn.Module):
 		log_probs,
 		k_log_probs,
 		advantages,
-		batch_sz=64
+		batch_sz=32
 		):
 
-		torch.cuda.empty_cache()
-
-		n_samples = log_probs.shape[0]
-		num_batch = int(n_samples//batch_sz)
-
-		for b in tqdm(range(num_batch)):
-
-			lp = log_probs[b*batch_sz:(b+1)*batch_sz]
-			k_lp = k_log_probs[b*batch_sz:(b+1)*batch_sz]
-			adv = advantages[b*batch_sz:(b+1)*batch_sz]
-			
-			print(lp.shape)
-			print(k_lp.shape)
-			print(adv.shape)
-			
-			loss = self.loss(lp, k_lp, adv)
-			print("###############")
-			print(loss.shape)
-			print(loss)
-			print("###############")
-			loss.backward(retain_graph=True)
-			self.optimizer.step()
-			self.optimizer.zero_grad()
-
-
-		lp = log_probs[(b+1)*batch_sz:-1]
-		k_lp = k_log_probs[(b+1)*batch_sz:-1]
-		adv = advantages[(b+1)*batch_sz:-1]
-			
-		
-		loss = self.loss(lp, k_lp, adv)
-
-		print(loss)
-		print(lp.shape)
-		print(k_lp.shape)
-		print(adv.shape)
-		loss.backward(retain_graph=True)
-		self.optimizer.step()
+		loss = self.loss(log_probs, k_log_probs, advantages)
 		self.optimizer.zero_grad()
-
-	
-		print("Warning: Actor Training Error")
+		loss.backward()
+		self.optimizer.step()
 		
 
 def main():

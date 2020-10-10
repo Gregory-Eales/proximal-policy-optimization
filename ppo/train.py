@@ -35,6 +35,43 @@ def train(agent, env, n_epoch, n_steps):
 		agent.update()
 
 
+def train_multi(agent, env, n_epoch, n_steps):
+
+	for epoch in range(n_epoch):
+
+		reward, prev_state, prev_first = env.observe()
+
+		for i in tqdm(range(n_steps)):
+
+			action = agent.act(prev_state['rgb'])
+
+			env.act(action)
+
+			reward, state, first = env.observe()
+			prev_state = state
+			prev_first = first
+
+
+def train_single(agent, env, n_epoch, n_steps):
+
+	prev_state = env.reset()
+
+	#for epoch in tqdm(range(n_epoch)):
+
+	for i in tqdm(range(n_steps)):
+
+		action = agent.act(prev_state)
+
+		state, reward, done, info = env.step(action[0])
+
+		if done:
+			pass
+
+		prev_state = state
+			
+		#agent.update()
+
+
 def run_experiment(
 	experiment_name,
 	environment_name,
@@ -64,7 +101,7 @@ def run_experiment(
 	)
 
 	# agent = RandomAgent(n_envs=n_envs)
-
+	
 	env = ProcgenGym3Env(num=n_envs, env_name="coinrun")
 	train(agent, env, n_episodes, n_steps)
 	generate_graphs(agent, exp_path)
@@ -78,6 +115,12 @@ def run_experiment(
 	plt.plot(agent.buffer.mean_reward)
 	plt.show()
 
+	"""
+	import gym
+	env = gym.make("procgen:procgen-coinrun-v0")
+	env = ProcgenGym3Env(num=n_envs, env_name="coinrun")
+	train_single(agent, env, n_episodes, n_steps)
+	"""
 
 if __name__ == '__main__':
 
@@ -93,9 +136,9 @@ if __name__ == '__main__':
 
 	# training params
 	parser.add_argument('--random_seeds', default=list(range(10)), type=list)
-	parser.add_argument('--n_episodes', default=5, type=int)
-	parser.add_argument('--n_steps', default=100, type=int)
-	parser.add_argument('--batch_sz', default=32, type=int)
+	parser.add_argument('--n_episodes', default=1, type=int)
+	parser.add_argument('--n_steps', default=50, type=int)
+	parser.add_argument('--batch_sz', default=14, type=int)
 	parser.add_argument('--gamma', default=0.999, type=float)
 	parser.add_argument('--critic_epochs', default=5, type=int)
 	parser.add_argument('--n_envs', default=1, type=int)

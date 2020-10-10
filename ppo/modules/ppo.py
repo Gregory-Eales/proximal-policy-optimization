@@ -68,21 +68,18 @@ class PPO(object):
 
 	def act(self, s):
 
-		# convert to torch tensor
 		s = torch.tensor(s).reshape(-1, 3, 64, 64).float()
 
-		# get policy prob distrabution
 		prediction = self.actor(s)
 		action_probabilities = torch.distributions.Categorical(prediction)
 		actions = action_probabilities.sample()
-
 		log_prob = action_probabilities.log_prob(actions)
 
-		k_p = self.k_actor(s).detach()
+		k_p = self.k_actor(s)
 		k_ap = torch.distributions.Categorical(k_p)
-		k_log_prob = k_ap.log_prob(actions).detach()
+		k_log_prob = k_ap.log_prob(actions.detach())
 
-		self.buffer.store_log_probs(log_prob, k_log_prob)
+		self.buffer.store_log_probs(log_prob, k_log_prob.detach())
 
 		return actions.detach().numpy()
 
@@ -101,7 +98,7 @@ class PPO(object):
 	def store(self, state, reward, prev_state, first):
 		self.buffer.store(state, reward, prev_state, first)
 
-	def calculate_advantages(self, states, prev_states, batch_sz=64):
+	def calculate_advantages(self, states, prev_states, batch_sz=43):
 
 		a = []
 
@@ -115,37 +112,28 @@ class PPO(object):
 			v = self.critic(p_s).detach()
 			q = self.critic(s).detach()
 			a.append(q - v + 1)
-			torch.cuda.empty_cache()
+			
 
 		s = states[(b+1)*batch_sz:]
 		p_s = prev_states[(b+1)*batch_sz:]
-		v = self.critic(p_s)
-		q = self.critic(s)
+		v = self.critic(p_s).detach()
+		q = self.critic(s).detach()
 		a.append(q - v + 1)
 
-		print(states.shape)
-		print(a[0].shape)
-		print(a[1].shape)
-		print(len(a))
 		a = torch.cat(a)
-		print(a.shape)
 
-		return a.detach()
+		return a
 
 	def update(self):
 
 		self.discount_rewards()
-
+	
 		# returns buffer values as pytorch tensors
 		s, lp, p_s, k_lp, d_r = self.buffer.get()
 
-		self.transfer_weights()
-
 		adv = self.calculate_advantages(s, p_s)
 
-		print(lp.shape)
-		print(k_lp.shape)
-		print(adv.shape)
+		self.transfer_weights()
 
 		self.critic.optimize(
 			states=s,
@@ -153,14 +141,12 @@ class PPO(object):
 			epochs=self.critic_epochs,
 			batch_sz=self.batch_sz
 			)
-		
+
 		self.actor.optimize(
 			log_probs=lp,
 			k_log_probs=k_lp,
 			advantages=adv
 			)
-
-		
 
 		self.buffer.clear()
 
@@ -168,18 +154,7 @@ class PPO(object):
 		return self.buffer.mean_reward
 
 def main():
-
-	import gym
-
-	torch.manual_seed(1)
-	np.random.seed(1)
-
-	env = gym.make('CartPole-v0')
-
-	ppo = PPO(alpha=0.001, input_dims=4, output_dims=2)
-
-	train(env, n_epoch=1000, n_steps=800, render=False, verbos=False)
-
+	pass
 
 if __name__ == "__main__":
 	main()

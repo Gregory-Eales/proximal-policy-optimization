@@ -15,7 +15,10 @@ class Critic(torch.nn.Module):
 		self.initialize_network()
 
 		# define optimizer
-		self.optimizer = torch.optim.Adam(lr=critic_lr, params=self.parameters())
+		self.optimizer = torch.optim.Adam(
+			lr=critic_lr,
+			params=self.parameters()
+			)
 
 		# define loss
 		self.loss = torch.nn.MSELoss()
@@ -23,6 +26,7 @@ class Critic(torch.nn.Module):
 		# get device
 		self.device = torch.device(
 			'cuda:0' if torch.cuda.is_available() else 'cpu:0')
+		
 		self.to(self.device)
 
 	# initialize network
@@ -65,13 +69,6 @@ class Critic(torch.nn.Module):
 
 		return out.to(torch.device('cpu:0'))
 
-	def normalize(self, x):
-		x = np.array(x)
-		x_mean = np.mean(x)
-		x_std = np.std(x) if np.std(x) > 0 else 1
-		x = (x-x_mean)/x_std
-		return x
-
 	def optimize(
 		self,
 		states,
@@ -79,11 +76,6 @@ class Critic(torch.nn.Module):
 		epochs,
 		batch_sz
 		):
-
-		"""
-		observations = self.normalize(observations.tolist())
-		rewards = self.normalize(rewards.tolist())
-		"""
 
 		n_samples = rewards.shape[0]
 		num_batch = int(n_samples//batch_sz)
@@ -99,9 +91,9 @@ class Critic(torch.nn.Module):
 				p = self.forward(s)
 				loss = self.loss(p, r)
 
-				loss.backward(retain_graph=True)
-				self.optimizer.step()
 				self.optimizer.zero_grad()
+				loss.backward()
+				self.optimizer.step()
 
 			s = states[(b+1)*batch_sz:]
 			r = rewards[(b+1)*batch_sz:]
@@ -109,15 +101,12 @@ class Critic(torch.nn.Module):
 			p = self.forward(s)
 			loss = self.loss(p, r)
 
-			loss.backward(retain_graph=True)
+			self.optimizer.zero_grad()
+			loss.backward()
 			self.optimizer.step()
 
 def main():
-
-	t1 = torch.rand(10, 3, 64, 64)
-	vn = Critic(0.01, 3, 1)
-	#vn.optimize(iter=100, state=t1, disc_reward=torch.rand(100, 1))
-	print(vn(t1))
+	pass
 
 if __name__ == "__main__":
 	main()
