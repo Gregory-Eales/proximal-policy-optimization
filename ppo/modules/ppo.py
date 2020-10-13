@@ -70,7 +70,7 @@ class PPO(object):
 
 		s = torch.tensor(s).reshape(-1, 3, 64, 64).float()
 
-		prediction = self.actor(s)
+		prediction = self.actor.forward(s)
 		action_probabilities = torch.distributions.Categorical(prediction)
 		actions = action_probabilities.sample()
 		log_prob = action_probabilities.log_prob(actions)
@@ -98,10 +98,11 @@ class PPO(object):
 	def store(self, state, reward, prev_state, first):
 		self.buffer.store(state, reward, prev_state, first)
 
-	def calculate_advantages(self, states, prev_states, batch_sz=43):
+	def calculate_advantages(self, states, prev_states, batch_sz=64):
 
 		a = []
 
+		print(states.shape)
 		n_samples = states.shape[0]
 		num_batch = int(n_samples//batch_sz)
 
@@ -114,8 +115,8 @@ class PPO(object):
 			a.append(q - v + 1)
 			
 
-		s = states[(b+1)*batch_sz:]
-		p_s = prev_states[(b+1)*batch_sz:]
+		s = states[(num_batch)*batch_sz:]
+		p_s = prev_states[(num_batch)*batch_sz:]
 		v = self.critic(p_s).detach()
 		q = self.critic(s).detach()
 		a.append(q - v + 1)

@@ -62,6 +62,7 @@ class Actor(torch.nn.Module):
 		out = self.leaky_relu(out)
 		out = self.l3(out)
 
+		out = self.relu(out)
 		out = self.softmax(out)
 
 		return out.to(torch.device('cpu:0'))

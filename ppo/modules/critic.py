@@ -80,7 +80,6 @@ class Critic(torch.nn.Module):
 		n_samples = rewards.shape[0]
 		num_batch = int(n_samples//batch_sz)
 
-		print("Training Value Net:")
 		for i in tqdm(range(epochs)):
 
 			for b in range(num_batch):
@@ -95,8 +94,8 @@ class Critic(torch.nn.Module):
 				loss.backward()
 				self.optimizer.step()
 
-			s = states[(b+1)*batch_sz:]
-			r = rewards[(b+1)*batch_sz:]
+			s = states[(num_batch)*batch_sz:]
+			r = rewards[(num_batch)*batch_sz:]
 
 			p = self.forward(s)
 			loss = self.loss(p, r)

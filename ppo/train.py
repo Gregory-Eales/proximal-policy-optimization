@@ -16,23 +16,30 @@ torch.autograd.set_detect_anomaly(True)
 
 def train(agent, env, n_epoch, n_steps):
 
-	for epoch in range(n_epoch):
+	counter = 0
+	ran = False
+
+	for epoch in tqdm(range(n_steps)):
 
 		reward, prev_state, prev_first = env.observe()
 
-		for i in tqdm(range(n_steps)):
+		action = agent.act(prev_state['rgb'])
 
-			action = agent.act(prev_state['rgb'])
+		env.act(action)
 
-			env.act(action)
+		reward, state, first = env.observe()
 
-			reward, state, first = env.observe()
+		agent.store(state['rgb'], reward, prev_state['rgb'], prev_first)
+		prev_state = state
+		prev_first = first
 
-			agent.store(state['rgb'], reward, prev_state['rgb'], prev_first)
-			prev_state = state
-			prev_first = first
+		if first:
+			ran = False
+			counter+=1
 
-		agent.update()
+		if counter % 10 == 0 and counter != 0 and not ran:
+			agent.update()
+			ran = True
 
 
 def train_multi(agent, env, n_epoch, n_steps):
@@ -101,8 +108,17 @@ def run_experiment(
 	)
 
 	# agent = RandomAgent(n_envs=n_envs)
-	
-	env = ProcgenGym3Env(num=n_envs, env_name="coinrun")
+
+
+	env = ProcgenGym3Env(
+			num=n_envs,
+			env_name="coinrun",
+			render_mode="rgb_array",
+			center_agent=False,
+			num_levels=1,
+			start_level=2,
+			)
+
 	train(agent, env, n_episodes, n_steps)
 	generate_graphs(agent, exp_path)
 
@@ -136,11 +152,11 @@ if __name__ == '__main__':
 
 	# training params
 	parser.add_argument('--random_seeds', default=list(range(10)), type=list)
-	parser.add_argument('--n_episodes', default=1, type=int)
-	parser.add_argument('--n_steps', default=50, type=int)
-	parser.add_argument('--batch_sz', default=14, type=int)
+	parser.add_argument('--n_episodes', default=20, type=int)
+	parser.add_argument('--n_steps', default=100000, type=int)
+	parser.add_argument('--batch_sz', default=64, type=int)
 	parser.add_argument('--gamma', default=0.999, type=float)
-	parser.add_argument('--critic_epochs', default=5, type=int)
+	parser.add_argument('--critic_epochs', default=20, type=int)
 	parser.add_argument('--n_envs', default=1, type=int)
 
 	# model params

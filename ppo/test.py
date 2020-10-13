@@ -1,6 +1,7 @@
 import gym
 import gym3
 from tqdm import tqdm
+from procgen import ProcgenGym3Env
 """
 env = gym.make("CartPole-v1")
 print("State: " ,env.reset().shape)
@@ -11,6 +12,7 @@ env = gym.make("Acrobot-v1")
 print("State: " ,env.reset().shape)
 print("Actions", env.action_space)
 print(" ")
+"""
 """
 env = gym.make("LunarLander-v2")
 state = env.reset()
@@ -33,7 +35,7 @@ for i in tqdm(range(10000)):
 
 	if done:
 		env.reset()
-
+"""
 """
 env = gym.make("Assault-ram-v4")
 print("State: " ,env.reset().shape)
@@ -81,3 +83,24 @@ for i in tqdm(range(100)):
 
 print(len(states))
 """
+env = ProcgenGym3Env(
+			num=1,
+			env_name="coinrun",
+			render_mode="rgb_array",
+			center_agent=False,
+			num_levels=1,
+			start_level=2,
+			)
+
+env = gym3.ViewerWrapper(env, info_key="rgb")
+
+for i in tqdm(range(100)):
+	
+
+	
+
+	env.act(gym3.types_np.sample(env.ac_space, bshape=(env.num,)))
+	rew, obs, first = env.observe()
+	#states.append(obs)
+	#print(f"step {step} reward {rew} first {first}")
+	#step += 1
